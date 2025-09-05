@@ -64,24 +64,24 @@ export default async function handler(req, res) {
 
         const userInfo = userResponse.data;
 
-        // カスタマーキーを生成
-        const customerKey = generateCustomerKey();
+// カスタマーキーを生成
+const customerKey = generateCustomerKey(return_domain);
 
         // Zapierテーブルにデータを送信（仮のURLの場合はスキップ）
         if (process.env.ZAPIER_WEBHOOK_URL && !process.env.ZAPIER_WEBHOOK_URL.includes('your-webhook-id')) {
+            // 日付をYYYY-MM-DD形式に変換
+            const expiresDate = new Date(Date.now() + (tokenData.expires_in * 1000));
+            const createdDate = new Date();
+            
             const zapierData = {
-                customer_key: customerKey,
-                email: userInfo.email,
-                access_token: tokenData.access_token,
-                refresh_token: tokenData.refresh_token,
-                token_type: tokenData.token_type,
-                expires_in: tokenData.expires_in,
-                expires_at: new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString(),
-                created_at: new Date().toISOString(),
-                kintone_domain: return_domain,
-                app_id: app_id,
-                user_name: userInfo.name,
-                user_picture: userInfo.picture
+                mail_customer_key: customerKey,
+                mail_email: userInfo.email,
+                mail_access_token: tokenData.access_token,
+                mail_refresh_token: tokenData.refresh_token,
+                mail_token_type: tokenData.token_type,
+                mail_expires_in: tokenData.expires_in,
+                mail_expires_at: expiresDate.toISOString().split('T')[0],
+                mail_created_at: createdDate.toISOString().split('T')[0]
             };
 
             await axios.post(process.env.ZAPIER_WEBHOOK_URL, zapierData);
@@ -105,6 +105,10 @@ export default async function handler(req, res) {
     }
 }
 
-function generateCustomerKey() {
-    return 'customer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+function generateCustomerKey(kintoneUrl) {
+    // kintoneURLからサブドメインを抽出 (例: https://example.cybozu.com → example)
+    const match = kintoneUrl.match(/https:\/\/([^.]+)\.cybozu\.com/);
+    const subdomain = match ? match[1] : 'unknown';
+    
+    return `customer_${subdomain}_${Date.now()}`;
 }
